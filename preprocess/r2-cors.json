@@ -1,0 +1,9 @@
+[
+  {
+    "AllowedOrigins": ["https://aaron-bartlett.github.io", "http://localhost:5173", "http://localhost:4173"],
+    "AllowedMethods": ["GET", "HEAD"],
+    "AllowedHeaders": ["Range", "Content-Type"],
+    "ExposeHeaders": ["Content-Length", "Content-Range", "ETag"],
+    "MaxAgeSeconds": 86400
+  }
+]

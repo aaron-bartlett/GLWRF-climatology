@@ -1,0 +1,13 @@
+name: gl-wrf
+channels:
+  - conda-forge
+dependencies:
+  - python=3.12
+  - xarray
+  - netcdf4
+  - zarr>=3
+  - numcodecs
+  - numpy
+  - pyproj
+  - xesmf
+  - pytest

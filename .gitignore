@@ -1,0 +1,15 @@
+preprocess/out/
+preprocess/out_uncropped/
+*.nc
+__pycache__/
+.pytest_cache/
+node_modules/
+dist/
+.impeccable/review/
+*.tar.gz
+.DS_Store
+.env
+.env.local
+.claude/
+.impeccable/*.local.json
+.impeccable/questions/
