@@ -3,12 +3,15 @@ import Map, { Layer, Source, type MapRef } from "react-map-gl/maplibre";
 import * as maplibregl from "maplibre-gl";
 import workerUrl from "maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url";
 import "maplibre-gl/dist/maplibre-gl.css";
+import type { Feature } from "geojson";
 import type { Bounds } from "../data/catalog";
 import type { Slice } from "../data/zarrClient";
 import HoverReadout, { type Readout } from "../components/HoverReadout";
 import { cellAt } from "./projection";
 import { fitDomain, fitOptions } from "./fitDomain";
 import DomainFrame from "./DomainFrame";
+// Great Lakes shoreline: Natural Earth 10m lakes, the five lakes plus Lake St. Clair and their bays, merged
+import greatLakes from "./greatLakes.json";
 
 // MapLibre 6 locates its worker relative to its own module URL, which breaks once Vite bundles it.
 maplibregl.setWorkerUrl(workerUrl);
@@ -39,6 +42,7 @@ export default function MapView({ bounds, imageUrl, loading, opacity, labels, sl
     for (const id of labelLayers) map?.setLayoutProperty(id, "visibility", labels ? "visible" : "none");
   }, [labelLayers, labels]);
 
+
   return (
     <Map
       id="main"
@@ -66,9 +70,21 @@ export default function MapView({ bounds, imageUrl, loading, opacity, labels, sl
         if (!window.location.hash) fitDomain(ev.target, bounds);
       }}
     >
+      {/* Great Lakes shoreline above the data, shown and hidden with the basemap labels */}
+      {styleReady && (
+        <Source id="great-lakes" type="geojson" data={greatLakes as Feature}>
+          <Layer
+            id="lake-outline"
+            type="line"
+            beforeId={beforeId}
+            layout={{ visibility: labels ? "visible" : "none" }}
+            paint={{ "line-color": "#15283f", "line-width": 0.75 }}
+          />
+        </Source>
+      )}
       {styleReady && imageUrl && (
         <Source id="data" type="image" url={imageUrl} coordinates={[[w, n], [e, n], [e, s], [w, s]]}>
-          <Layer id="data" type="raster" beforeId={beforeId} paint={{ "raster-opacity": opacity, "raster-resampling": "nearest" }} />
+          <Layer id="data" type="raster" beforeId="lake-outline" paint={{ "raster-opacity": opacity, "raster-resampling": "nearest" }} />
         </Source>
       )}
       <DomainFrame bounds={bounds} loading={loading} />

@@ -276,7 +276,7 @@ Show the required attribution.
 2. Map each value to RGBA with a colormap lookup table, for example a 256-entry LUT built from `d3-scale-chromatic`, clamped to the catalog `range`. Make `NaN` fully transparent.
 3. Write the result into an `ImageData` on an offscreen canvas, then convert it to a blob URL with `canvas.toBlob` and `URL.createObjectURL`. Revoke the previous URL.
 4. Show it with a MapLibre **`image` source** whose `coordinates` are the four corners from `catalog.bounds`, in the order `[[W,N],[E,N],[E,S],[W,S]]`. Update it with `source.updateImage({ url, coordinates })`.
-5. Add the raster layer **below the basemap's label layers** (`beforeId` set to the first symbol layer). Overlay opacity is a 0–100% slider (default 80%), and a toggle hides or shows all basemap labels (every symbol layer). Neither is stored in the URL.
+5. Add the raster layer **below the basemap's label layers** (`beforeId` set to the first symbol layer). Overlay opacity is a 0–100% slider (default 80%), and a toggle hides or shows all basemap labels (every symbol layer). Neither is stored in the URL. The same toggle shows/hides a Great Lakes shoreline outline (a bundled GeoJSON, `src/map/greatLakes.json`, extracted once from Natural Earth 10m lakes) drawn between the data and the labels.
 6. Set `raster-resampling: "nearest"` to show true grid cells, or `"linear"` for a smoothed look. Make this a user toggle if useful.
 
 ### 6.3 Upgrade path (only if needed)

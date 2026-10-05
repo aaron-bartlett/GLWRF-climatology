@@ -246,6 +246,39 @@ option { font-weight: 400; color: var(--ink); }
 .readout-value { font-size: 14px; font-weight: 700; }
 .readout-coords { font-size: 11px; color: var(--ink-2); }
 
+/* Disclaimer: dismissible notice at the bottom left of the map (clear of the attribution), shown on every load */
+.disclaimer {
+  position: absolute;
+  bottom: 16px;
+  left: 16px;
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  width: max-content;
+  max-width: min(480px, calc(100% - 32px));
+  padding: 10px 8px 10px 16px;
+  border: 1px solid var(--ink);
+  border-radius: 2px;
+  background: var(--ground);
+  font-size: 14px;
+}
+.disclaimer-close {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: 0;
+  border-radius: 2px;
+  background: transparent;
+  color: var(--ink);
+  cursor: pointer;
+  transition: background-color 150ms var(--ease);
+}
+.disclaimer-close:hover { background: var(--hover); }
+.disclaimer-close svg { fill: none; stroke: currentColor; stroke-width: 1.5; stroke-linecap: round; }
+
 /* Narrow screens: panel stacks above the map */
 @media (max-width: 720px) {
   .map-top { top: 8px; left: 8px; right: 8px; flex-wrap: wrap; gap: 8px; }

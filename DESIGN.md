@@ -188,7 +188,7 @@ Rectilinear. A barely softened 2px corner on every bordered control and plate; t
 Quiet and squared; the only button is the "Map labels" toggle.
 - **Shape:** 2px corner, 30px tall, 1px blue-grey border, cell-surface fill, 13px text.
 - **Hover:** hover-tint fill, 150ms on the shared ease (cubic-bezier(0.22, 1, 0.36, 1)).
-- **Pressed:** inverted navy, the same "live" form as a selected scenario cell. When off, all basemap labels are hidden.
+- **Pressed:** inverted navy, the same "live" form as a selected scenario cell. When off, all basemap labels and the Great Lakes outline are hidden.
 
 ### Inputs / Fields
 - **Select:** 36px, 2px corner, 1px blue-grey border, cell-surface fill, 15px value, a navy chevron drawn inline. Hover darkens the border to slate.
@@ -209,6 +209,12 @@ A calibrated scale: a 12px ramp outlined in navy, outlined triangular extension 
 
 ### Domain Frame (signature)
 A 1px crisp navy rectangle around the data domain with outward 5px ticks every 5°, 11px degree labels, and opaque plate-ground margin bands (46px left, 24px bottom) so basemap labels end at one clean edge. Dashed while a field is loading. The overlay sits beneath the basemap labels and renders nearest-neighbour cells.
+
+### Great Lakes Outline
+A 0.75px navy shoreline of the five Great Lakes and Lake St. Clair (Natural Earth 10m, merged, `src/map/greatLakes.json`), drawn above the data and below the basemap labels. It toggles with "Map labels".
+
+### Disclaimer
+A flat plate-ground notice at the bottom left of the map (16px in), 1px navy border, 14px text, max 480px wide, with a 24px navy × close button. It reappears on every page load; closing it is not remembered.
 
 ### Hover Readout
 A flat plate-ground tag offset 14px from the cursor, 1px navy border, bold value with units, coordinates in 11px slate; reads "No data" where empty.

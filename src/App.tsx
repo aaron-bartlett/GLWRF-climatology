@@ -8,6 +8,7 @@ import { MapProvider } from "react-map-gl/maplibre";
 import MapToolbar from "./components/MapToolbar";
 import MapNav from "./components/MapNav";
 import Controls from "./components/Controls";
+import Disclaimer from "./components/Disclaimer";
 import { parseSelection, serializeSelection, type Selection } from "./state/urlState";
 import "./index.css";
 
@@ -96,6 +97,7 @@ export default function App() {
               onLabels={setLabels}
             />
           </div>
+          <Disclaimer />
         </main>
       </MapProvider>
     </div>

@@ -10,6 +10,8 @@ dist/
 .DS_Store
 .env
 .env.local
+.env*
 .claude/
 .impeccable/*.local.json
 .impeccable/questions/
+.impeccable
