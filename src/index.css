@@ -104,10 +104,11 @@ h1, h2, p, figure, fieldset { margin: 0; }
   cursor: pointer;
   transition: background-color 150ms var(--ease);
 }
-/* Home stands alone; zoom in/out form one joined pair below it */
+/* Home stands alone; zoom in/out form one joined pair below it; the mode switch stands alone below that */
 .nav-button:first-child { margin-bottom: 8px; }
 .nav-button:nth-child(2) { border-radius: 2px 2px 0 0; }
-.nav-button:last-child { margin-top: -1px; border-radius: 0 0 2px 2px; }
+.nav-button:nth-child(3) { margin-top: -1px; border-radius: 0 0 2px 2px; }
+.nav-button.mode-button { margin-top: 8px; }
 .nav-button:hover { background: var(--hover); }
 .nav-button:focus-visible { position: relative; z-index: 1; }
 .nav-button svg { fill: none; stroke: currentColor; stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; }
@@ -333,6 +334,13 @@ option { font-weight: 400; color: var(--ink); }
 }
 .readout-value { font-size: 14px; font-weight: 700; }
 .readout-coords { font-size: 11px; color: var(--ink-2); }
+
+/* Pinned point: a ringed circle with its readout; an X marks it removable under the cursor */
+.maplibregl-marker:has(.pin) { z-index: 1; pointer-events: none; } /* the map handles clicks on it */
+.pin { position: relative; width: 20px; height: 20px; }
+.pin svg { display: block; fill: none; stroke-linecap: round; }
+.pin-halo { stroke: var(--ground); stroke-width: 4; }
+.pin-ring, .pin-x { stroke: var(--ink); stroke-width: 1.5; }
 
 /* Category names on the map (lake basins) */
 .maplibregl-marker:has(.basin-label) { pointer-events: none; }

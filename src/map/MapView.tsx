@@ -18,6 +18,12 @@ maplibregl.setWorkerUrl(workerUrl);
 
 
 const BASEMAP = "https://tiles.openfreemap.org/styles/positron";
+const PIN_RADIUS = 10; // px; also the click/hover target for removing the pin
+
+export interface Pin {
+  lng: number;
+  lat: number;
+}
 
 interface Props {
   id: "main" | "compare"; // "main" owns the URL hash; "compare" is the right map of the side-by-side view
@@ -29,15 +35,30 @@ interface Props {
   outlines: boolean; // Great Lakes shoreline
   slice: Slice | null; // values behind the overlay, for the hover readout
   variable: Variable;
+  probe: boolean; // probe mode: a click pins a point (one per map, shared by both maps)
+  pin: Pin | null;
+  onPin: (pin: Pin | null) => void;
 }
 
-export default function MapView({ id, bounds, imageUrl, loading, opacity, labels, outlines, slice, variable }: Props) {
+export default function MapView({ id, bounds, imageUrl, loading, opacity, labels, outlines, slice, variable, probe, pin, onPin }: Props) {
   const { west: w, south: s, east: e, north: n } = bounds;
   const mapRef = useRef<MapRef>(null);
   const [beforeId, setBeforeId] = useState<string>();
   const [labelLayers, setLabelLayers] = useState<string[]>([]);
   const [styleReady, setStyleReady] = useState(false);
   const [readout, setReadout] = useState<Readout | null>(null);
+  const [overPin, setOverPin] = useState(false);
+
+  // Value under a point, or null where there's no data.
+  const valueAt = (lng: number, lat: number) => {
+    const cell = slice && cellAt(lng, lat, bounds, slice.width, slice.height);
+    const v = cell ? slice.values[cell.row * slice.width + cell.col] : NaN;
+    return Number.isNaN(v) ? null : v;
+  };
+  const isOverPin = (point: { x: number; y: number }) => {
+    const p = pin && mapRef.current?.project([pin.lng, pin.lat]);
+    return !!p && Math.hypot(point.x - p.x, point.y - p.y) <= PIN_RADIUS;
+  };
 
   useEffect(() => {
     const map = mapRef.current?.getMap();
@@ -54,14 +75,28 @@ export default function MapView({ id, bounds, imageUrl, loading, opacity, labels
       mapStyle={BASEMAP}
       attributionControl={{ compact: true }}
       hash={id === "main"} // view as #zoom/lat/lon; takes precedence over the initial bounds
+      cursor={overPin ? "pointer" : probe ? "crosshair" : undefined}
+      doubleClickZoom={!probe} // a double click would pin and then unpin
       onMouseMove={(ev) => {
+        setOverPin(isOverPin(ev.point));
         if (!slice) return setReadout(null);
         const { lng, lat } = ev.lngLat;
-        const cell = cellAt(lng, lat, bounds, slice.width, slice.height);
-        const v = cell ? slice.values[cell.row * slice.width + cell.col] : NaN;
-        setReadout({ x: ev.point.x, y: ev.point.y, value: Number.isNaN(v) ? null : v, lon: lng, lat });
+        setReadout({ x: ev.point.x, y: ev.point.y, value: valueAt(lng, lat), lon: lng, lat });
       }}
-      onMouseOut={() => setReadout(null)}
+      onMouseOut={() => {
+        setReadout(null);
+        setOverPin(false);
+      }}
+      // Clicking the pin removes it in either mode; in probe mode a click elsewhere moves it there.
+      onClick={(ev) => {
+        if (isOverPin(ev.point)) {
+          onPin(null);
+          setOverPin(false);
+        } else if (probe) {
+          onPin({ lng: ev.lngLat.lng, lat: ev.lngLat.lat });
+          setOverPin(true);
+        }
+      }}
       // Add the overlay as soon as the style's layers exist. `onLoad` would also wait for every basemap tile.
       onStyleData={(ev) => {
         const layers = ev.target.getStyle()?.layers;
@@ -96,7 +131,25 @@ export default function MapView({ id, bounds, imageUrl, loading, opacity, labels
         </Marker>
       ))}
       <DomainFrame bounds={bounds} loading={loading} />
-      {readout && <HoverReadout readout={readout} variable={variable} />}
+      {pin && (
+        <Marker longitude={pin.lng} latitude={pin.lat} anchor="center">
+          <div className="pin">
+            <svg width={2 * PIN_RADIUS} height={2 * PIN_RADIUS} viewBox="0 0 20 20" aria-hidden="true">
+              <circle className="pin-halo" cx="10" cy="10" r="8" />
+              <circle className="pin-ring" cx="10" cy="10" r="8" />
+              {overPin && <path className="pin-x" d="M7 7l6 6M13 7l-6 6" />}
+            </svg>
+            {/* Offsets are from the pin's top-left corner, so this sits where the hover readout would */}
+            {slice && (
+              <HoverReadout
+                readout={{ x: PIN_RADIUS, y: PIN_RADIUS, value: valueAt(pin.lng, pin.lat), lon: pin.lng, lat: pin.lat }}
+                variable={variable}
+              />
+            )}
+          </div>
+        </Marker>
+      )}
+      {readout && !overPin && <HoverReadout readout={readout} variable={variable} />}
     </Map>
   );
 }

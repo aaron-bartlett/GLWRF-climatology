@@ -3,7 +3,7 @@ import { fetchCatalog, type Catalog } from "./data/catalog";
 import { readSlice, type Slice } from "./data/zarrClient";
 import { sliceToImageUrl } from "./map/dataOverlay";
 import { localRange } from "./map/range";
-import MapView from "./map/MapView";
+import MapView, { type Pin } from "./map/MapView";
 import MapSync from "./map/MapSync";
 import Caption from "./components/Caption";
 import { MapProvider } from "react-map-gl/maplibre";
@@ -32,6 +32,8 @@ export default function App() {
   const [opacity, setOpacity] = useState(0.8);
   const [labels, setLabels] = useState(true);
   const [outlines, setOutlines] = useState(true);
+  const [probe, setProbe] = useState(false); // pan mode (false) or probe mode (true)
+  const [pin, setPin] = useState<Pin | null>(null); // one pinned point, shown on both maps
   const requestId = useRef(0);
 
   useEffect(() => {
@@ -133,9 +135,12 @@ export default function App() {
                   opacity={opacity}
                   labels={labels}
                   outlines={outlines}
+                  probe={probe}
+                  pin={pin}
+                  onPin={setPin}
                 />
                 <div className="map-top">
-                  <MapNav mapId={id} bounds={catalog.bounds} />
+                  <MapNav mapId={id} bounds={catalog.bounds} probe={probe} onProbe={setProbe} />
                   {!split && toolbar}
                   {!split && (
                     <button
