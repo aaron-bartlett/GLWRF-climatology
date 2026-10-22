@@ -45,7 +45,7 @@ def test_variables_match_config(catalog):
     for var, meta in catalog["variables"].items():
         assert meta["label"] == build_stores.VARIABLES[var]["label"]
         assert meta["units"] == build_stores.VARIABLES[var]["units"]
-        assert meta["group"] in {"Temperature", "Precipitation", "Snowfall"}, var
+        assert meta["group"] in {"Temperature", "Humidity and pressure", "Precipitation", "Snowfall", "Lakes"}, var
 
 
 def test_groups_are_contiguous(catalog):
@@ -89,20 +89,28 @@ def _lightness(hex_color):
     return 116 * np.cbrt(y) - 16 if y > 0.008856 else 903.3 * y
 
 
-def test_stop_colormaps_are_perceptually_linear(catalog):
-    """Colormaps given as stop lists must change lightness monotonically in even steps,
-    except the user-specified snowfall ramp."""
+def test_hand_built_colormaps_are_perceptually_linear(catalog):
+    """The hand-built snow day-count ramp changes lightness monotonically in even steps. (The package colormaps are
+    perceptually uniform by construction, the snowfall ramp is the user's choice, basin colors are categorical.)"""
     for var, meta in catalog["variables"].items():
-        if isinstance(meta["colormap"], list) and meta["colormap"] != build_stores.SNOW_COLORMAP:
+        if meta["colormap"] == build_stores.SNOW_DAYS_COLORMAP:
             steps = np.diff([_lightness(c) for c in meta["colormap"]])
             assert np.all(steps < 0) or np.all(steps > 0), var
             assert np.ptp(steps) < 1.0, var  # equal L* spacing within 1 unit
 
 
-def test_colormap_families_are_distinct(catalog):
-    """Temperature, dew point, precipitation and snowfall never share a colormap (PRODUCT.md)."""
-    family = lambda var: "dew point" if "_D2" in var else catalog["variables"][var]["group"]
-    owners = {}
+def test_colormap_assignment(catalog):
+    """batlow for temperatures (incl. dew point and lake surface), bamako for precipitation, snowfall unchanged,
+    bupu for everything else (UPDATES.md)."""
     for var, meta in catalog["variables"].items():
-        owners.setdefault(str(meta["colormap"]), set()).add(family(var))
-    assert all(len(f) == 1 for f in owners.values()), owners
+        if var == "lake_basin":
+            expected = [build_stores.BASIN_COLORS]
+        elif any(k in var for k in ("_T2", "_D2", "TLAKE")):
+            expected = [build_stores.BATLOW]
+        elif meta["group"] == "Precipitation":
+            expected = [build_stores.BAMAKO]
+        elif meta["group"] == "Snowfall":
+            expected = [build_stores.SNOW_COLORMAP, build_stores.SNOW_DAYS_COLORMAP]
+        else:
+            expected = [build_stores.BUPU]
+        assert meta["colormap"] in expected, var

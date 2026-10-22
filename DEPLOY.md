@@ -4,7 +4,7 @@ The site has two independent parts:
 
 | Part | Where | What | Updated by |
 |---|---|---|---|
-| **Data** | Cloudflare R2 bucket `gl-wrf-data`, public via its `r2.dev` URL | `v1/catalog.json` + five Zarr stores (~16 MB, 586 files) | you, with `preprocess/upload.sh` |
+| **Data** | Cloudflare R2 bucket `gl-wrf-data`, public via its `r2.dev` URL | `v1/catalog.json` + five Zarr stores (~41 MB, 1,676 files) | you, with `preprocess/upload.sh` |
 | **Site** | GitHub Pages: https://aaron-bartlett.github.io/GLWRF-climatology/ | the built Vite/React app | GitHub Actions on every push to `main` |
 
 The site finds the data through one build setting, the repository variable `DATA_BASE_URL`.
@@ -16,10 +16,10 @@ Do Part A (data) first, then Part B (site). Total time: about 30 minutes.
 ## Before you start
 
 - A **GitHub** account (`aaron-bartlett`).
-- A **Cloudflare** account. R2 needs a payment method on file, but this project stays inside the free tier: 16 MB of the 10 GB storage allowance, and about 3 reads per map view.
+- A **Cloudflare** account. R2 needs a payment method on file, but this project stays inside the free tier: 41 MB of the 10 GB storage allowance, and about 3 reads per map view.
 - On this Mac: `git` and `rclone` are already installed (`/opt/homebrew/bin`). The conda env `gl-wrf` and `npm install` are already set up.
 
-The cropped grids (7 boundary cells removed from each edge, 131×160 native cells) are already built into `preprocess/out/v1`. To rebuild and re-check them at any time:
+The cropped grids (7 boundary cells removed from each edge, 131×160 native cells) are already built into `preprocess/out/v1`. A rebuild needs all twenty source files in `data/`: `stats_{snowfall,precipitation,monthly_mean,lake_surface}_<scenario>_<years>.nc` for the five scenarios. To rebuild and re-check them at any time:
 
 ```bash
 cd "/Users/aaron/Documents/GL-WRF Website/preprocess"
@@ -100,7 +100,7 @@ The script uploads each version folder in two passes:
 1. **Data chunks** are mirrored with `Cache-Control: public, max-age=31536000, immutable`. Stale chunks are deleted from the bucket.
 2. **`catalog.json` and the Zarr metadata** (`.zmetadata`, `.zarray`, `.zattrs`, `.zgroup`) get `Cache-Control: public, max-age=300`.
 
-It should report 410 chunks plus 176 metadata files.
+It should report 1,250 chunks plus 426 metadata files.
 
 ### A7. Check the data is public and CORS-enabled
 Replace `pub-…` with your URL:

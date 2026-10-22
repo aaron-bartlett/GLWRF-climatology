@@ -1,20 +1,27 @@
 import type { Variable } from "../data/catalog";
 import Colorbar from "./Colorbar";
+import OptionsMenu from "./OptionsMenu";
 
 interface Props {
   variable: Variable;
+  range: [number, number]; // effective colormap range
+  local: boolean;
+  onLocal: (v: boolean) => void;
   opacity: number; // 0–1
   onOpacity: (v: number) => void;
   labels: boolean;
   onLabels: (v: boolean) => void;
+  outlines: boolean;
+  onOutlines: (v: boolean) => void;
 }
 
-/** Floating bar over the map: colorbar, overlay opacity and map-label toggle. */
-export default function MapToolbar({ variable, opacity, onOpacity, labels, onLabels }: Props) {
+/** Floating bar over the map: colorbar, overlay opacity and the options menu. */
+export default function MapToolbar({ variable, range, local, onLocal, opacity, onOpacity, ...options }: Props) {
   const percent = Math.round(opacity * 100);
+  const categorical = !!variable.categories;
   return (
     <div className="toolbar">
-      <Colorbar variable={variable} />
+      <Colorbar variable={variable} range={range} local={local && !categorical} />
       <label className="toolbar-group">
         <span className="toolbar-label">
           Opacity <output className="toolbar-value">{percent}%</output>
@@ -22,6 +29,7 @@ export default function MapToolbar({ variable, opacity, onOpacity, labels, onLab
         <input
           type="range"
           className="slider"
+          aria-label="Opacity"
           min={0}
           max={100}
           step={5}
@@ -30,9 +38,7 @@ export default function MapToolbar({ variable, opacity, onOpacity, labels, onLab
         />
       </label>
       <div className="toolbar-group">
-        <button type="button" className="toggle" aria-pressed={labels} onClick={() => onLabels(!labels)}>
-          Map labels
-        </button>
+        <OptionsMenu {...options} local={local} onLocal={onLocal} localDisabled={categorical} />
       </div>
     </div>
   );

@@ -15,3 +15,11 @@ dist/
 .impeccable/*.local.json
 .impeccable/questions/
 .impeccable
+.gitignore
+
+UPDATES.md
+PRODUCT.md
+DEPLOY.md
+CLAUDE.md
+DESIGN.md
+tech_stack.md

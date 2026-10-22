@@ -57,6 +57,18 @@ export function colorize(values: Float32Array, lut: Uint8Array, [lo, hi]: [numbe
   return rgba;
 }
 
+/** Category codes (1..n) → RGBA pixels in colors[code - 1]; anything else (incl. NaN) is transparent. */
+export function colorizeCategories(values: Float32Array, colors: string[]): Uint8ClampedArray<ArrayBuffer> {
+  const rgb = colors.map(parseRgb);
+  const rgba = new Uint8ClampedArray(values.length * 4);
+  for (let i = 0; i < values.length; i++) {
+    const c = rgb[Math.round(values[i]) - 1];
+    if (!c) continue;
+    rgba.set([...c, 255], i * 4);
+  }
+  return rgba;
+}
+
 /** CSS linear-gradient for the colorbar. */
 export function cssGradient(name: string | string[], stops = 16): string {
   const f = interpolator(name);

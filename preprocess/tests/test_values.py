@@ -42,6 +42,8 @@ def test_domain_means_match_source(decoded, source):
     _, lat = to_lonlat.transform(np.zeros(decoded.sizes["y"]), decoded.y.values)
     area = xr.DataArray(np.cos(np.radians(lat)) ** 2, dims="y")
     for var in VARIABLES:
+        if "categories" in VARIABLES[var]:  # the mean of category codes means nothing
+            continue
         mean = decoded[var].weighted(area).mean(["y", "x"]).values
         diff = mean - source[var].mean(["south_north", "west_east"]).values
         assert np.all(np.abs(diff) < 0.05 * float(source[var].std())), var
@@ -60,4 +62,6 @@ def test_seasonal_cycle(decoded):
 def test_mostly_valid(decoded):
     """Only the corners outside the rotated native domain should be missing."""
     for var in VARIABLES:
+        if VARIABLES[var]["kind"] == "lake_surface":  # masked to lakes or basins by design (see test_lakes.py)
+            continue
         assert np.isnan(decoded[var].values).mean() < 0.2, var

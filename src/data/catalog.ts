@@ -24,6 +24,8 @@ export interface Variable {
   colormap: string | string[]; // d3 scheme name (optional "_r"), or hex color stops from low to high
   range: [number, number];
   month: boolean;
+  categories?: string[]; // categorical: code n (1-based) is categories[n - 1], drawn in colormap[n - 1]
+  centers?: [number, number][]; // [lon, lat] map label position per category
 }
 
 export interface Catalog {
@@ -51,6 +53,12 @@ export function validateCatalog(c: Catalog): Catalog {
   if (!c.scenarios || !Object.keys(c.scenarios).length) fail("no scenarios");
   for (const [k, v] of Object.entries(c.variables)) {
     if (!(v.range?.length === 2 && v.range[0] < v.range[1])) fail(`variables.${k}.range`);
+    if (v.categories) {
+      const n = v.categories.length;
+      if (!(Array.isArray(v.colormap) && v.colormap.length === n && v.centers?.length === n)) {
+        fail(`variables.${k}: categories, colormap and centers differ in length`);
+      }
+    }
   }
   const d = c.defaults;
   if (!c.variables[d?.var]) fail("defaults.var not in variables");

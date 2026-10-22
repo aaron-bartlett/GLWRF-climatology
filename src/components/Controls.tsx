@@ -7,9 +7,10 @@ interface Props {
   catalog: Catalog;
   sel: Selection;
   onChange: (sel: Selection) => void;
+  split: boolean; // side-by-side view: scenarios are picked on the maps instead
 }
 
-export default function Controls({ catalog, sel, onChange }: Props) {
+export default function Controls({ catalog, sel, onChange, split }: Props) {
   const variable = catalog.variables[sel.var];
   const grid = scenarioGrid(catalog);
 
@@ -27,7 +28,7 @@ export default function Controls({ catalog, sel, onChange }: Props) {
           onChange={() => onChange({ ...sel, scn: key })}
         />
         <span className="scenario-name">{s.ssp_label ?? s.label}</span>
-        <span className="scenario-note">{available ? (s.ssp ? "" : s.years) : "No data yet"}</span>
+        <span className="scenario-note">{available ? "" : "No data yet"}</span>
       </label>
     );
   };
@@ -61,10 +62,16 @@ export default function Controls({ catalog, sel, onChange }: Props) {
         </select>
       </label>
 
-      <fieldset className="field">
+      {!split && <fieldset className="field">
         <legend className="field-label">Scenario</legend>
         <div className="scenario-grid" style={{ gridTemplateColumns: `repeat(${grid.baselines.length + grid.periods.length}, 1fr)` }}>
-          {grid.baselines.map((_, i) => <span key={`b${i}`} />)}
+          {/* Baseline years sit level with the period years */}
+          {grid.baselines.map((key) => (
+            <span key={`b-${key}`} className="scenario-head">
+              {"\u00a0"}
+              <span className="scenario-head-years">{catalog.scenarios[key].years}</span>
+            </span>
+          ))}
           {grid.periods.map((p) => (
             <span key={p.key} className="scenario-head">
               {p.label}
@@ -83,7 +90,7 @@ export default function Controls({ catalog, sel, onChange }: Props) {
             }),
           )}
         </div>
-      </fieldset>
+      </fieldset>}
     </form>
   );
 }

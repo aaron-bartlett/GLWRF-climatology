@@ -20,12 +20,23 @@ describe("validateCatalog", () => {
     expect(validateCatalog(valid())).toBeTruthy();
   });
 
+  it("accepts a categorical variable", () => {
+    const c = valid();
+    c.variables.basin = {
+      label: "Basin", units: "", colormap: ["#000000", "#ffffff"], range: [1, 2], month: false,
+      categories: ["A", "B"], centers: [[-90, 45], [-80, 44]],
+    };
+    expect(validateCatalog(c)).toBeTruthy();
+  });
+
   it.each<[string, (c: Catalog) => void]>([
     ["missing bound", (c) => delete (c.bounds as Partial<Catalog["bounds"]>).north],
     ["inverted range", (c) => (c.variables.mean_T2.range = [5, 1])],
     ["unknown default var", (c) => (c.defaults.var = "nope")],
     ["default scenario without store", (c) => (c.defaults.scn = "ssp245_mid")],
     ["default month out of range", (c) => (c.defaults.m = 2)],
+    ["categories without matching colors", (c) => (c.variables.mean_T2.categories = ["A", "B"])],
+    ["categories without centers", (c) => Object.assign(c.variables.mean_T2, { categories: ["A"], colormap: ["#000000"] })],
   ])("rejects %s", (_, mutate) => {
     const c = valid();
     mutate(c);

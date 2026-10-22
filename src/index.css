@@ -40,7 +40,22 @@ h1, h2, p, figure, fieldset { margin: 0; }
   scrollbar-width: thin;
   scrollbar-color: var(--rule) transparent;
 }
-.map { position: relative; min-height: 0; }
+.map { position: relative; display: grid; grid-template: 1fr / 1fr; min-height: 0; }
+.map-pane { position: relative; min-width: 0; min-height: 0; }
+
+/* Side-by-side view: shared toolbar in a strip above two synced maps */
+.map.is-split { grid-template: auto 1fr / 1fr 1fr; }
+.map.is-split .map-pane { grid-row: 2; }
+.map.is-split .map-pane + .map-pane { border-left: 1px solid var(--rule); }
+.map-strip {
+  grid-column: 1 / -1;
+  display: flex;
+  justify-content: center;
+  padding: 8px 16px;
+  border-bottom: 1px solid var(--rule);
+  background: var(--ground);
+}
+.map-strip .toolbar { margin: 0; border: 0; padding: 2px 0 0; }
 
 .nameplate {
   padding-bottom: 12px;
@@ -53,7 +68,7 @@ h1, h2, p, figure, fieldset { margin: 0; }
 /* Caption: what the figure shows */
 .caption { display: grid; gap: 4px; }
 .caption-title { font-size: 22px; line-height: 1.2; font-weight: 700; letter-spacing: -0.015em; }
-.caption-units { font-weight: 400; color: var(--ink-2); }
+.caption-units { display: block; font-weight: 400; color: var(--ink-2); }
 .caption-detail { font-size: 15px; }
 .caption-dataset { margin-top: 4px; font-size: 12px; color: var(--ink-2); }
 .caption-error {
@@ -96,6 +111,9 @@ h1, h2, p, figure, fieldset { margin: 0; }
 .nav-button:hover { background: var(--hover); }
 .nav-button:focus-visible { position: relative; z-index: 1; }
 .nav-button svg { fill: none; stroke: currentColor; stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; }
+/* Split (top right of the single map) and close (top right of the right map) */
+.nav-button.split-button { flex: none; margin: 0; border-radius: 2px; }
+.map-nav + .split-button { margin-left: auto; }
 
 /* Floating toolbar: colorbar + display toggles */
 .toolbar {
@@ -132,6 +150,44 @@ h1, h2, p, figure, fieldset { margin: 0; }
 .toggle:hover { background: var(--hover); }
 .toggle[aria-pressed="true"] { background: var(--ink); border-color: var(--ink); color: var(--surface); }
 
+/* Options menu: flat popover under its trigger */
+.options { position: relative; }
+.options-trigger { display: flex; align-items: center; gap: 8px; }
+.options-trigger svg { fill: none; stroke: currentColor; stroke-width: 1.5; }
+.menu {
+  position: absolute;
+  top: calc(100% + 4px);
+  right: 0;
+  z-index: 2;
+  display: grid;
+  min-width: 184px;
+  padding: 4px 0;
+  border: 1px solid var(--rule);
+  border-radius: 2px;
+  background: var(--ground);
+}
+.menu-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 32px;
+  padding: 0 12px 0 10px;
+  border: 0;
+  background: transparent;
+  color: var(--ink);
+  font: inherit;
+  font-size: 14px;
+  text-align: left;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background-color 150ms var(--ease);
+}
+.menu-item:hover:enabled { background: var(--hover); }
+.menu-item:disabled { color: var(--ink-3); cursor: not-allowed; }
+.menu-item:focus-visible { outline-offset: -2px; }
+.menu-check { flex: none; width: 12px; height: 12px; fill: none; stroke: currentColor; stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; }
+.menu-separator { height: 1px; margin: 4px 0; background: var(--rule); }
+
 /* Colorbar: calibrated scale */
 .colorbar { display: grid; grid-template-columns: 1fr auto; column-gap: 10px; align-items: start; }
 .colorbar-bar { grid-column: 1; display: flex; height: 12px; }
@@ -144,6 +200,12 @@ h1, h2, p, figure, fieldset { margin: 0; }
 .colorbar-cap.is-high { clip-path: polygon(0 0, 100% 50%, 0 100%); margin-left: -1px; }
 .colorbar-cap.is-high::after { clip-path: polygon(0 1px, calc(100% - 2px) 50%, 0 calc(100% - 1px)); }
 .colorbar-units { grid-column: 2; grid-row: 1 / span 2; font-size: 12px; line-height: 12px; color: var(--ink-2); }
+.colorbar-local { display: block; margin-top: 4px; font-size: 11px; line-height: 1; color: var(--ink); }
+
+/* Legend for categorical variables: swatch + name per category */
+.legend { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 14px; max-width: 440px; min-height: 30px; font-size: 12px; }
+.legend-item { display: flex; align-items: center; gap: 6px; white-space: nowrap; }
+.legend-swatch { width: 12px; height: 12px; border: 1px solid var(--ink); }
 .colorbar-scale { grid-column: 1; position: relative; height: 22px; margin: 0 9px; }
 .colorbar-tick {
   position: absolute;
@@ -215,6 +277,32 @@ option { font-weight: 400; color: var(--ink); }
 .scenario.is-unavailable .scenario-name { color: var(--ink-3); text-decoration: line-through; text-decoration-thickness: 1px; }
 .scenario.is-unavailable .scenario-note { color: var(--ink-3); }
 
+/* Scenario bar: the five scenarios along the bottom of each map in the side-by-side view */
+.scenario-bar {
+  position: absolute;
+  bottom: 36px; /* above the attribution */
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 4px;
+  width: max-content;
+  max-width: calc(100% - 32px);
+}
+.scenario-bar .scenario {
+  flex: 1 1 0;
+  min-width: 0;
+  min-height: 44px;
+  padding: 4px 8px;
+  color: var(--ink);
+  font: inherit;
+  text-align: left;
+  white-space: nowrap;
+}
+.scenario-bar .scenario:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+.scenario-bar .scenario[aria-checked="true"] { background: var(--ink); border-color: var(--ink); color: var(--surface); }
+.scenario-bar .scenario[aria-checked="true"] .scenario-note { color: var(--rule); }
+.scenario-bar .scenario-note:empty { display: inline; }
+
 /* Map frame + tick collar (SVG over the map) */
 .domain-frame { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; overflow: visible; }
 .domain-frame .frame, .domain-frame line { fill: none; stroke: var(--ink); stroke-width: 1; shape-rendering: crispEdges; }
@@ -245,6 +333,19 @@ option { font-weight: 400; color: var(--ink); }
 }
 .readout-value { font-size: 14px; font-weight: 700; }
 .readout-coords { font-size: 11px; color: var(--ink-2); }
+
+/* Category names on the map (lake basins) */
+.maplibregl-marker:has(.basin-label) { pointer-events: none; }
+.basin-label {
+  display: block;
+  padding: 2px 6px;
+  border: 1px solid var(--ink);
+  border-radius: 2px;
+  background: var(--ground);
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
+}
 
 /* Disclaimer: dismissible notice at the bottom left of the map (clear of the attribution), shown on every load */
 .disclaimer {
@@ -277,13 +378,18 @@ option { font-weight: 400; color: var(--ink); }
   transition: background-color 150ms var(--ease);
 }
 .disclaimer-close:hover { background: var(--hover); }
+.app.is-split .disclaimer { bottom: 96px; } /* clear of the left map's scenario bar */
 .disclaimer-close svg { fill: none; stroke: currentColor; stroke-width: 1.5; stroke-linecap: round; }
 
 /* Narrow screens: panel stacks above the map */
 @media (max-width: 720px) {
-  .map-top { top: 8px; left: 8px; right: 8px; flex-wrap: wrap; gap: 8px; }
-  .toolbar { flex-wrap: wrap; gap: 10px 16px; width: 100%; }
-  .toolbar .colorbar { width: 100%; }
+  /* The toolbar stays on one row beside the view buttons, compacted */
+  .map-top { top: 8px; left: 8px; right: 8px; flex-wrap: nowrap; gap: 8px; }
+  .toolbar { flex: 1; min-width: 0; flex-wrap: nowrap; gap: 12px; padding: 6px 10px; }
+  .toolbar .colorbar { flex: 1; min-width: 120px; width: auto; }
+  .toolbar-label { display: none; }
+  .slider { width: 72px; }
+  .options-text { display: none; }
   .app { grid-template-columns: 1fr; grid-template-rows: auto 70vh; height: auto; }
   .panel { border-right: 0; border-bottom: 1px solid var(--rule); overflow: visible; }
 }

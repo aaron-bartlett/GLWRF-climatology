@@ -143,7 +143,7 @@ A cool, near-monochrome ink-and-paper palette tinted toward lake blue, so that e
 
 **The Ink-Not-Black Rule.** Lake navy replaces black, off-white replaces white, blue-grey tints replace neutral greys. No `#000`, no `#fff`, no neutral grey in the UI.
 
-**The Catalog Owns the Ramp Rule.** Data colormaps are not design tokens. Each variable's colormap comes from `catalog.json` as a d3 scheme name (optionally `_r`) or a list of hex stops; stop lists must be perceptually linear (equal CIELAB L* steps). Snowfall, precipitation, temperature and dewpoint each get a distinct ramp; the temperature ramp runs light blue → violet → dark red. Ranges are fixed per variable across scenarios.
+**The Catalog Owns the Ramp Rule.** Data colormaps are not design tokens. Each variable's colormap comes from `catalog.json` as a d3 scheme name (optionally `_r`) or a list of hex stops; the stop lists are sampled from perceptually uniform scientific maps: batlow for every temperature (2 m, dew point, lake surface), bamako for precipitation, ColorBrewer BuPu for the rest; snowfall keeps its own ramps. Categorical variables (lake basins) carry one colour per category (Paul Tol's "bright" set). Ranges are fixed per variable across scenarios unless the viewer picks a local range, which the colorbar then labels "local range".
 
 ## Typography
 
@@ -166,7 +166,9 @@ A cool, near-monochrome ink-and-paper palette tinted toward lake blue, so that e
 
 ## Layout
 
-A two-column figure layout: a fixed 340px panel on the left (plate ground, 24px sides, 28px between nameplate, caption and controls, scrolling independently) and the map filling the rest. A floating toolbar is centred along the top of the map, 16px down, carrying the colorbar (280px), the opacity slider (160px) and the "Map labels" toggle, 24px apart. The data domain is fitted into the open map area below the toolbar (24px gap) and right of the panel, with room left for the collar margins and attribution.
+A two-column figure layout: a fixed 340px panel on the left (plate ground, 24px sides, 28px between nameplate, caption and controls, scrolling independently) and the map filling the rest. A floating toolbar is centred along the top of the map, 16px down, carrying the colorbar (280px), the opacity slider (160px) and the Options menu, 24px apart; the split button sits at the top right. The data domain is fitted into the open map area below the toolbar (24px gap) and right of the panel, with room left for the collar margins and attribution.
+
+**Side-by-side view.** The map area splits into two equal panes with a 1px blue-grey divider. The shared toolbar moves into a static plate-ground strip across the top of both panes (1px rule below), so it never covers either pane's view buttons. Each pane has its own home/zoom column at the top left and a scenario bar at the bottom centre (above the attribution); the right pane has a close (×) button at its top right. The panel's scenario matrix is hidden while split. Below 720px the toolbar stays on one row beside the view buttons, compacted (no toolbar labels, 72px slider, icon-only Options).
 
 Spacing runs on a 4px base (4, 8, 12, 16, 20, 24, 28); 6px and 10px appear only inside small controls. Desktop-first: below 720px the panel stacks above a 70vh map and the toolbar wraps; mobile is not otherwise designed for.
 
@@ -185,10 +187,18 @@ Rectilinear. A barely softened 2px corner on every bordered control and plate; t
 ## Components
 
 ### Buttons (toggle)
-Quiet and squared; the only button is the "Map labels" toggle.
+Quiet and squared; used for the "Options" menu trigger (with a navy chevron).
 - **Shape:** 2px corner, 30px tall, 1px blue-grey border, cell-surface fill, 13px text.
 - **Hover:** hover-tint fill, 150ms on the shared ease (cubic-bezier(0.22, 1, 0.36, 1)).
-- **Pressed:** inverted navy, the same "live" form as a selected scenario cell. When off, all basemap labels and the Great Lakes outline are hidden.
+
+### Options Menu
+A flat plate-ground popover under its trigger (1px blue-grey border, 2px corner, no shadow), 32px rows of 14px text: Map labels and Lake outlines (checkboxes), a 1px rule, then Global and Local colormap (radios). Checked items show a navy check mark; state is form, not hue. Local is disabled (muted slate) for categorical variables. Closes on outside click, Escape, or picking a radio.
+
+### Split and Close Buttons
+32px nav-button squares: a two-pane icon (split, top right of the single map) and an × (close, top right of the right map).
+
+### Scenario Bar
+Side-by-side view only: the five scenarios as one row of flat scenario cells (two lines: SSP or "Historical", then period or years), sharing the matrix's live, hover and unavailable forms.
 
 ### Inputs / Fields
 - **Select:** 36px, 2px corner, 1px blue-grey border, cell-surface fill, 15px value, a navy chevron drawn inline. Hover darkens the border to slate.
@@ -211,7 +221,10 @@ A calibrated scale: a 12px ramp outlined in navy, outlined triangular extension 
 A 1px crisp navy rectangle around the data domain with outward 5px ticks every 5°, 11px degree labels, and opaque plate-ground margin bands (46px left, 24px bottom) so basemap labels end at one clean edge. Dashed while a field is loading. The overlay sits beneath the basemap labels and renders nearest-neighbour cells.
 
 ### Great Lakes Outline
-A 0.75px navy shoreline of the five Great Lakes and Lake St. Clair (Natural Earth 10m, merged, `src/map/greatLakes.json`), drawn above the data and below the basemap labels. It toggles with "Map labels".
+A 0.75px navy shoreline of the five Great Lakes and Lake St. Clair (Natural Earth 10m, merged, `src/map/greatLakes.json`), drawn above the data and below the basemap labels. It toggles with "Lake outlines" in the Options menu.
+
+### Category Labels and Legend
+For a categorical variable the colorbar becomes a legend (12px swatches outlined in navy, names in 12px), and each category's name sits on the map at its centre as a flat plate-ground tag (1px navy border, 12px bold). They belong to the data, so the Map labels option doesn't hide them.
 
 ### Disclaimer
 A flat plate-ground notice at the bottom left of the map (16px in), 1px navy border, 14px text, max 480px wide, with a 24px navy × close button. It reappears on every page load; closing it is not remembered.
@@ -227,7 +240,7 @@ A flat plate-ground tag offset 14px from the cursor, 1px navy border, bold value
 - **Do** keep unavailable scenarios visible in the matrix.
 - **Do** set every number in tabular figures with a true minus, and attach units to every value.
 - **Do** keep floating elements as flat off-white plates with a 1px border and a 2px corner.
-- **Do** take every data colormap and range from `catalog.json`, perceptually linear.
+- **Do** take every data colormap and range from `catalog.json`, perceptually uniform.
 - **Do** keep basemap labels above the data, cells nearest-neighbour, and the overlay opacity user-set (default 80%).
 
 ### Don't:

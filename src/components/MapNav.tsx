@@ -5,8 +5,8 @@ import { fitDomain } from "../map/fitDomain";
 const icon = { width: 16, height: 16, viewBox: "0 0 16 16", "aria-hidden": true } as const;
 
 /** Home (reset to the domain view) and zoom in/out. */
-export default function MapNav({ bounds }: { bounds: Bounds }) {
-  const { main: map } = useMap();
+export default function MapNav({ mapId, bounds }: { mapId: string; bounds: Bounds }) {
+  const map = useMap()[mapId];
   if (!map) return null;
   return (
     <div className="map-nav" role="group" aria-label="Map view">

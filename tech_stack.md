@@ -77,11 +77,11 @@ This document defines the architecture and tech stack for the GL-WRF climate dat
 
 ### 2.3 Processing steps (in order)
 1. **Read and clean the statistics files.** See `data/variables.md` for the file-to-variable mapping and quirks.
-   - All files share one 145×174 curvilinear WRF grid with 2D lat/lon (`XLAT`/`XLONG` in the monthly-mean files, `lat`/`lon` in the others). The snowfall and precipitation files need `drop_variables=["lat", "lon"]` to open in xarray.
+   - All files share one 145×174 curvilinear WRF grid with 2D lat/lon (`XLAT`/`XLONG` in the monthly-mean and lake-surface files, `lat`/`lon` in the others). The lake-surface file has `month` first and a size-1 `stat` dim (squeezed out). The snowfall and precipitation files need `drop_variables=["lat", "lon"]` to open in xarray.
    - Crop `BORDER` = 7 cells from every edge (to 131×160) before regridding. The WRF lateral boundary zone holds erroneous values that also stretched the display ranges.
    - Dimension names differ between files (`south_north`/`west_east` vs `lat`/`lon`). Rename them to common names, and transpose `month` (the last dim in the source) to come first.
    - Keep only the variables listed in `data/variables.md`. Convert units to display units (K → °C for T2), and cast to float64 so int16 encoding rounds exactly.
-2. **Group by scenario.** Each of the 5 scenarios becomes one store (see 3.1), merging its snowfall, precipitation and monthly-mean files:
+2. **Group by scenario.** Each of the 5 scenarios becomes one store (see 3.1), merging its snowfall, precipitation, monthly-mean and lake-surface files:
    | Scenario key | Source files | Years |
    |---|---|---|
    | `historical` | `*_historical_2005-2015.nc` | 2005–2014 |
@@ -94,7 +94,7 @@ This document defines the architecture and tech stack for the GL-WRF climate dat
 3. **Regrid to a regular Web Mercator (EPSG:3857) grid.**
    - **Why:** MapLibre places an image overlay linearly between four corner coordinates in Web Mercator space. A grid that is regular in 3857 therefore lines up exactly. A regular lat/lon grid would be slightly misplaced in the north–south direction, and the native Lambert grid would be visibly wrong.
    - Choose a resolution close to the native WRF spacing (derive it from the 2D lat/lon if no `DX` attribute exists).
-   - Use bilinear interpolation for continuous fields and conservative interpolation for fluxes such as precipitation if needed.
+   - Use bilinear interpolation for continuous fields. Lake-masked fields (`kind: lake_surface`) use nearest neighbour, masked to the native domain, so cells next to land aren't lost. The categorical `lake_basin` is stored as integer codes (scale 1, offset 0).
    - Store 1D `x`/`y` coordinates (meters, EPSG:3857), and record the lon/lat **bounds** of the grid in attributes for the frontend.
    - Order rows **north to south** (`y` descending), so row 0 maps directly to the top of the image.
 4. **Quantize.** Store values as `int16` with CF `scale_factor`/`add_offset`:
@@ -149,7 +149,7 @@ The frontend fetches this first and builds all controls from it. Nothing about v
 ```json
 {
   "version": "v1",
-  "dataset": "GL-WRF regional simulation · 131×160 native grid (edges cropped) · 10-year climatologies",
+  "dataset": "GL-WRF regional simulation · 131×160 cropped grid · 10-year climatologies",
   "bounds": { "west": -93.5, "south": 40.0, "east": -74.0, "north": 50.5 },
   "grid": { "crs": "EPSG:3857", "width": 600, "height": 450 },
   "scenarios": {
@@ -162,12 +162,14 @@ The frontend fetches this first and builds all controls from it. Nothing about v
   "months": ["January", "February", "…", "December"],
   "variables": {
     "mean_T2":         { "label": "Mean T2",         "units": "°C",        "colormap": "RdBu_r",  "range": [-20, 30], "month": true },
-    "snow_cover_days": { "label": "Snow cover days", "units": "days/year", "colormap": "Blues",   "range": [0, 200],  "month": false }
+    "snow_cover_days": { "label": "Snow cover days", "units": "days/year", "colormap": "Blues",   "range": [0, 200],  "month": false },
+    "lake_basin":      { "label": "Great Lakes drainage basin", "units": "", "colormap": ["#4477aa", "…"], "range": [1, 5], "month": false,
+                         "categories": ["Lake Superior", "…"], "centers": [[-87.95, 47.91], "…"] }
   },
   "defaults": { "var": "mean_T2", "scn": "historical", "m": 0 }
 }
 ```
-(The values above are illustrative.) `colormap` is either a d3-scale-chromatic scheme name (a `_r` suffix reverses it) or a list of hex color stops from low to high. Stop lists must be perceptually linear (even CIELAB L* steps), which `preprocess/tests` checks; each family has its own: temperature light blue → violet → dark red, dew point straw → green → teal, precipitation mint → teal → navy, snow day-counts lilac → indigo (`preprocess/tests` also checks that families never share a colormap). The one exception is the user-chosen snowfall-amount ramp (white → light pink → dark pink → purple → dark blue → light blue, with the range pinned to start at 0). Each variable also has a `group` ("Temperature", "Precipitation" or "Snowfall") that sections the variable menu; a group's variables must be adjacent in the catalog. For a variable without a month dimension, the month menu stays visible but disabled and blank. Compute display `range` values in preprocessing from the 2nd and 98th percentiles across **all scenarios and months**, rounded outward to 2 significant digits, so colorbars are stable and colors are comparable when switching scenario or month.
+(The values above are illustrative.) `colormap` is either a d3-scale-chromatic scheme name (a `_r` suffix reverses it) or a list of hex color stops from low to high. The stop lists are sampled once from the `colormaps` Python package (not a build dependency): `batlow` for every temperature (T2, dew point D2, lake surface), `bamako` for precipitation, ColorBrewer `bupu` for everything else (humidity, pressure, lake ice); snowfall keeps its own ramps (the user-chosen snowfall-amount ramp white → light pink → dark pink → purple → dark blue → light blue, range pinned to start at 0, and a perceptually linear lilac → indigo ramp for snow day-counts). `preprocess/tests` checks this assignment. Each variable also has a `group` ("Temperature", "Humidity and pressure", "Precipitation", "Snowfall" or "Lakes") that sections the variable menu; a group's variables must be adjacent in the catalog. A **categorical** variable (`lake_basin`) adds `categories` (code n is `categories[n-1]`, drawn in `colormap[n-1]`) and `centers` (one `[lon, lat]` label position per category); its `range` is `[1, n]` and its `units` is empty. For a variable without a month dimension, the month menu stays visible but disabled and blank. Compute display `range` values in preprocessing from the 2nd and 98th percentiles across **all scenarios and months**, rounded outward to 2 significant digits, so colorbars are stable and colors are comparable when switching scenario or month.
 
 The scenario control's layout (historical left of a 2×2 grid) is built from the `ssp` and `period` fields, and its row and column headers show `ssp_label` (e.g. "SSP2-4.5") and `period_label` (e.g. "Mid-century"). The `historical` scenario has neither field. A scenario whose store hasn't been built yet has `"store": null`, and the UI shows it disabled.
 
@@ -276,7 +278,7 @@ Show the required attribution.
 2. Map each value to RGBA with a colormap lookup table, for example a 256-entry LUT built from `d3-scale-chromatic`, clamped to the catalog `range`. Make `NaN` fully transparent.
 3. Write the result into an `ImageData` on an offscreen canvas, then convert it to a blob URL with `canvas.toBlob` and `URL.createObjectURL`. Revoke the previous URL.
 4. Show it with a MapLibre **`image` source** whose `coordinates` are the four corners from `catalog.bounds`, in the order `[[W,N],[E,N],[E,S],[W,S]]`. Update it with `source.updateImage({ url, coordinates })`.
-5. Add the raster layer **below the basemap's label layers** (`beforeId` set to the first symbol layer). Overlay opacity is a 0–100% slider (default 80%), and a toggle hides or shows all basemap labels (every symbol layer). Neither is stored in the URL. The same toggle shows/hides a Great Lakes shoreline outline (a bundled GeoJSON, `src/map/greatLakes.json`, extracted once from Natural Earth 10m lakes) drawn between the data and the labels.
+5. Add the raster layer **below the basemap's label layers** (`beforeId` set to the first symbol layer). Overlay opacity is a 0–100% slider (default 80%). An **Options** menu holds two checkboxes, Map labels (every basemap symbol layer) and Lake outlines (a Great Lakes shoreline from a bundled GeoJSON, `src/map/greatLakes.json`, extracted once from Natural Earth 10m lakes, drawn between the data and the labels), and two radios, Global colormap (the catalog `range`, default) and Local colormap (the 2nd–98th percentile of the field(s) on screen, rounded outward to 2 significant digits by `src/map/range.ts`; falls back to the catalog range when there's no spread). Opacity, labels and outlines aren't stored in the URL; the local colormap is (`cmap=local`). Categorical variables are drawn one color per code with their category names as map labels, and have no local range.
 6. Set `raster-resampling: "nearest"` to show true grid cells, or `"linear"` for a smoothed look. Make this a user toggle if useful.
 
 ### 6.3 Upgrade path (only if needed)
@@ -286,9 +288,11 @@ If redrawing becomes slow (large grids, live colormap or range changes), replace
 | Component | Function |
 |---|---|
 | `MapView.tsx` | `react-map-gl` map, basemap, data overlay layer. Pan/zoom and `hash` view sync are bonus features. |
-| `Controls.tsx` | Variable select; month select (shown only when the variable has `month: true`); scenario selector with historical to the left of a 2×2 grid (columns midcentury and latecentury, rows ssp245 above ssp585). All built from the catalog. |
-| `MapToolbar.tsx` | Floating bar along the top of the map: colorbar, opacity slider, map-labels toggle |
-| `Colorbar.tsx` | Calibrated scale for the active colormap and range: ruled ticks at round values, with units |
+| `Controls.tsx` | Variable select; month select (shown only when the variable has `month: true`); scenario selector with historical to the left of a 2×2 grid (columns midcentury and latecentury, rows ssp245 above ssp585), hidden in the side-by-side view. All built from the catalog. |
+| `MapToolbar.tsx` | Floating bar along the top of the map (a strip above both maps in the side-by-side view): colorbar, opacity slider, `OptionsMenu.tsx` |
+| `Colorbar.tsx` | Calibrated scale for the active colormap and range: ruled ticks at round values, with units ("local range" when local); a swatch legend for categorical variables |
+| `ScenarioBar.tsx` | Side-by-side view only: five flat scenario buttons along the bottom of each map |
+| `map/MapSync.tsx` | Keeps the two side-by-side maps (`main`, `compare`) on the same view |
 | `HoverReadout.tsx` | On mouse move (`map/projection.ts` `cellAt`): `lngLat` → EPSG:3857 → grid `(row, col)` → value from the cached slice. Shows the value with units, or "no data". |
 | `LoadingIndicator.tsx` | Shows load and error state from the data layer |
 
@@ -329,7 +333,8 @@ If redrawing becomes slow (large grids, live colormap or range changes), replace
 
 ### 7.3 URL state (shareable links)
 - **Data selection** goes in **query params**, for example `?var=mean_T2&scn=ssp245_mid&m=6` (`m` is the 0-based month index).
-- **Map view** goes in the **hash** using MapLibre's built-in `hash` option, for example `#6.2/45.1/-84.3` (zoom, lat, lon). With a hash present the map opens there; without one it fits the domain below the toolbar.
+- **Side-by-side view**: `scn2` holds the right map's scenario (left out for a single map; ignored unless it names a scenario with a store). **Local colormap**: `cmap=local` (left out when global, and for categorical variables).
+- **Map view** goes in the **hash** using MapLibre's built-in `hash` option (on the left map only; the right map follows it), for example `#6.2/45.1/-84.3` (zoom, lat, lon). With a hash present the map opens there; without one it fits the domain below the toolbar.
 - On load: parse the params, **validate them against `catalog.json`** (an unknown `var` or `scn`, or an out-of-range `m`, falls back to `defaults`), and write back the normalized values.
 - On change: update with `history.replaceState`, not `pushState`, so the back button isn't flooded. Use `pushState` only for deliberate, discrete changes if needed.
 - When the variable changes to one without a month dimension, drop `m` from the URL. When it changes back, restore the last month or the default.
@@ -389,4 +394,4 @@ Resolved: the grid is 145×174 curvilinear. The variables come from `data/variab
 
 1. Whether a custom domain is available (for R2 production access and/or Pages)
 2. Whether a land/water mask should be applied (for example, lake-only fields)
-3. Colormaps: resolved for now. T2 and D2 use the temperature stop list, precipitation uses `YlGnBu`, snow uses `Blues`, and ranges are fixed per variable across scenarios.
+3. Colormaps: resolved. batlow for temperatures (T2, D2, lake surface), bamako for precipitation, bupu for the rest, snowfall unchanged; global ranges are fixed per variable across scenarios, with an optional local range (§6.2).

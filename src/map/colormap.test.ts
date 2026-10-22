@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildLut, colorize, cssGradient, interpolator } from "./colormap";
+import { buildLut, colorize, colorizeCategories, cssGradient, interpolator } from "./colormap";
 
 describe("interpolator", () => {
   it("resolves d3 scheme names and reverses with _r", () => {
@@ -35,6 +35,20 @@ describe("colorize", () => {
 
   it("makes NaN transparent", () => {
     expect(Array.from(colorize(new Float32Array([NaN]), lut, [0, 1]))).toEqual([0, 0, 0, 0]);
+  });
+});
+
+describe("colorizeCategories", () => {
+  it("draws codes 1..n in their colors and leaves the rest transparent", () => {
+    const rgba = colorizeCategories(new Float32Array([1, 2, 0, 3, NaN, 2.0001]), ["#ff0000", "#00ff00"]);
+    expect(Array.from(rgba)).toEqual([
+      255, 0, 0, 255,
+      0, 255, 0, 255,
+      0, 0, 0, 0,
+      0, 0, 0, 0,
+      0, 0, 0, 0,
+      0, 255, 0, 255,
+    ]);
   });
 });
 

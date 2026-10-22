@@ -31,7 +31,7 @@ It serves this specific GL-WRF downscaled dataset directly in the browser. That 
 ## Capabilities and Constraints
 
 **Selectors (required).** These three choices determine the image displayed:
-1. **Variable.** The variables listed in `data/variables.md` (snowfall, precipitation, and monthly means).
+1. **Variable.** The variables listed in `data/variables.md`: temperature and dew point, humidity and sea-level pressure, precipitation, snowfall, and lake surface (temperature, ice cover, ice days, and the categorical Great Lakes drainage basin).
 2. **Month.** A dropdown (January–December) that appears only when the selected variable has a `month` dimension. Variables without one, such as the snowfall statistics and `precip_days_1mm`, hide it.
 3. **Scenario.** One of five: historical (2005–2014), ssp245 midcentury (2045–2054), ssp245 latecentury (2085–2094), ssp585 midcentury, and ssp585 latecentury. The user fixed this layout: historical sits to the left of a 2×2 grid, with columns for midcentury and latecentury and rows for ssp245 (top) and ssp585 (bottom).
 
@@ -45,6 +45,10 @@ It serves this specific GL-WRF downscaled dataset directly in the browser. That 
 
 **Bonus features (after the selectors work):** panning, zooming (with the map view stored in the URL hash), and a hover readout of the value and units at a point ("no data" where empty).
 
+**Side-by-side comparison.** One map by default. A split button opens two synced maps of the same variable and month with one shared colorbar; each has its own scenario (five flat buttons along its bottom, replacing the panel's scenario matrix while split) and its own home/zoom buttons. An × on the right map returns to one map. The URL holds the second scenario (`scn2`).
+
+**Options menu.** Map labels and lake outlines (independent toggles), and a global (default, fixed per variable) or local (2nd–98th percentile of what's on screen) colormap range. The local choice is in the URL (`cmap=local`).
+
 **Out of scope**
 - Data download. The user explicitly set it aside.
 - Any backend, server, database, or paid service.
@@ -56,8 +60,10 @@ It serves this specific GL-WRF downscaled dataset directly in the browser. That 
 	- Answer: D2 is already in deg C. leave as is
 - Whether to add scenario comparison (difference or side-by-side). It was not selected as a must-have.
 	-Answer: This can be left out. Switching between viewing scenarios is enough
+	- Update: side-by-side comparison was added (see Capabilities). No difference maps.
 - Colormap and range conventions per variable, and any land or lake mask (tech_stack.md §11).
 	- Answer: Create min/max ranges for each variable which remain constant between different scenarios. No land/lake mask is necessary for the data. All colormaps should be perceptively linear but different colormaps should be used for snowfall, precipitation, temperature, and dewpoint
+	- Update: colormaps now come from the `colormaps` package: batlow for temperatures (T2, D2 and lake surface share it, by the user's choice), bamako for precipitation, bupu for everything else; snowfall keeps its ramps. A local range is available as an option.
 
 ## Brand Commitments
 
